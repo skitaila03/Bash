@@ -1,0 +1,18 @@
+sources=("colors" 
+	"root" 
+	"help" 
+	"dialog"
+	"rpm"
+	"php"
+	"lamp"
+	"lemp"
+	"ports"
+	"hosts"
+	"vh"
+	"wp"	
+	"unistall")
+
+for (( i=0 ; i < ${#sources[@]}; ++i ));
+do
+	source `pwd`/includes/${sources[$i]}
+done

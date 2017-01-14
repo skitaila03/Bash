@@ -1,0 +1,8 @@
+if [ "$(id -u)" != "0" ]; 
+	then
+		echo -e "{${RED}Error${NC}} Sudo required!" >&2
+		exit
+fi
+
+public_ip=`curl -s http://icanhazip.com`
+private_ip=`ip addr | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/'`

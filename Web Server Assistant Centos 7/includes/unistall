@@ -1,0 +1,18 @@
+unistall(){
+	service nginx stop
+	service httpd stop
+	service php-fpm stop
+	chkconfig nginx off
+	chkconfig httpd off
+	chkconfig php-fpm off
+	rm -rf /usr/sbin/nginx
+	rm -rf /etc/nginx
+	rm -rf /etc/init.d/nginx
+	rm -rf /usr/share/nginx
+	rm -rf /var/lib/mysql
+	rm -rf /etc/httpd
+	rm -rf /var/www
+	rm /etc/my.cnf
+	yes | yum remove nginx* httpd* php* mariadb mariadb-server epel-release
+	echo -e "{${BLUE}Done${NC}} Unistall Complete!" >&2
+}

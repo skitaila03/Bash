@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source `pwd`/includes/includes
+
+while :
+do	
+	case $1 in
+		--version | -v) 
+			echo -e "version ${PURPLE}0.1${NC}" >&2
+			exit
+		;;
+		--dialog | -d) 
+			dialog_form
+			exit
+		;;
+		--help | -h) 
+			display_help 
+			exit
+		;;
+      		-*)
+          		echo -e "{${RED}Error${NC}} Unknown option: ${ORANGE}$1${NC}" >&2
+          		exit
+          	;;
+      		--|*)
+			break
+          	;;
+	esac
+done
+
+case "$1" in
+	lamp) lamp
+	;;
+	lemp) lemp
+	;;
+	hosts) hosts
+	;;
+	vh) vh
+	;;
+	ports) open_ports
+	;;
+	wp) wp
+	;;
+	unistall) unistall
+	;;
+  	*)
+		echo -e "${GREEN}*${NC} Use: ${ORANGE}$0 -h${NC} to print help list" >&2
+		#display_help
+		exit 
+	;;
+esac

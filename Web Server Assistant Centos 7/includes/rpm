@@ -1,0 +1,39 @@
+package(){
+	package=$1
+}
+rpm_install_package(){
+	if ! rpm -q $1 > /dev/null;
+		then
+			if [[ ! -z $2 ]];
+				then
+					yes | yum install $1 $2
+			else
+				yes | yum install $1
+			fi
+
+			if [[ $1 = "mariadb" ]] > /dev/null || [[ $1 = "httpd" ]] > /dev/null || [[ $1 = "nginx" ]] > /dev/null;
+				then
+					systemctl start $1
+					systemctl enable $1  
+			fi
+	fi
+}
+rpm_installed_package(){
+	if rpm -q $1 > /dev/null;
+		then
+			echo -e "{${BLUE}Skipping${NC}} ${ORANGE}$1${NC} is already instaled!" >&2
+			checks=$1
+			sleep 2
+	else
+		echo -e "{${BLUE}Installing${NC}} ${ORANGE}$1${NC}..." >&2
+		checks="install"
+		sleep 2
+
+		if [[ ! -z $2 ]];
+				then
+					rpm_install_package $1 $2
+		else
+				rpm_install_package $1
+		fi
+	fi
+}

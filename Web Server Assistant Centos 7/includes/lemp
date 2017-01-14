@@ -1,0 +1,48 @@
+lemp(){
+	if rpm -q nginx > /dev/null
+		then
+			echo -e "{${RED}Error${NC}} nginx is already installed!" >&2
+			exit
+	fi
+
+	package nginx
+	rpm_installed_package epel-release
+	rpm_installed_package $package
+
+	if rpm -q $package > /dev/null;
+		then
+			if [[ $checks != $package ]] > /dev/null;
+				then
+					echo -e "{${BLUE}Checking${NC}} Path: ${GREEN}/usr/share/nginx/html${NC}" >&2
+					site=$(curl -s $public_ip)
+					if [[ ! -z $site ]] > /dev/null; 
+						then
+							echo -e "{${BLUE}Done${NC}} ${ORANGE}$package${NC} has been verified${GREEN}&${NC}installed!" >&2
+					else 
+						echo -e "{${RED}Error${NC}} Verifying ${ORANGE}$package${NC}" >&2
+					fi
+				fi
+
+			sleep 2
+			package mariadb
+			rpm_installed_package $package mariadb-server
+
+			if [[ $checks != $package ]] > /dev/null;
+				then
+					echo -e "\n\033#6Press Enter then press Y all time" >&2
+					sleep 2
+					mysql_secure_installation
+					echo -e "{${BLUE}Done${NC}} ${ORANGE}$package${NC} has been installed!" >&2
+			fi
+
+			sleep 2
+			package php
+			rpm_installed_package $package
+			rpm_installed_package php-mysql php-fpm
+					
+			if [[ $checks != $package ]] > /dev/null;
+				then
+					check_php nginx
+			fi
+	fi
+}

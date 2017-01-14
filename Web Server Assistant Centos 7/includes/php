@@ -1,0 +1,150 @@
+check_php(){
+	tmp_ip=$public_ip
+	tmp_ip+="/"
+	tmp_ip+="info.php"
+	pushd "$PWD" > /dev/null
+	case $1 in
+		httpd)
+			systemctl restart httpd
+			touch /var/www/html/info.php
+			printf "<?php echo "succes"; ?>" > /var/www/html/info.php
+			echo -e "{${BLUE}Checking${NC}} Path: ${GREEN}/var/www/html/info.php${NC}" >&2
+			cd /var/www/html
+		;;
+		nginx) 
+			touch /etc/php.ini.bak
+			cat /etc/php.ini > /etc/php.ini.bak
+			awk '{gsub(/;cgi.fix_pathinfo=1/,"cgi.fix_pathinfo=0"); print}' /etc/php.ini > tmp && mv tmp /etc/php.ini.bak
+			echo "" > /etc/php.ini
+			cat /etc/php.ini.bak > /etc/php.ini
+			rm /etc/php.ini.bak
+			touch /etc/php-fpm.d/www.conf.bak
+			cat /etc/php-fpm.d/www.conf > /etc/php-fpm.d/www.conf.bak
+			awk '{gsub(/127.0.0.1:9000/,"/var/run/php-fpm/php-fpm.sock"); print}' /etc/php-fpm.d/www.conf.bak > tmp && mv tmp /etc/php-fpm.d/www.conf.bak
+			awk '{gsub(/;listen.owner/,"listen.owner"); print}' /etc/php-fpm.d/www.conf.bak > tmp && mv tmp /etc/php-fpm.d/www.conf.bak
+			awk '{gsub(/;listen.group/,"listen.group"); print}' /etc/php-fpm.d/www.conf.bak > tmp && mv tmp /etc/php-fpm.d/www.conf.bak
+			awk '{gsub(/apache/,"nginx"); print}' /etc/php-fpm.d/www.conf.bak > tmp && mv tmp /etc/php-fpm.d/www.conf.bak
+			echo "" > /etc/php-fpm.d/www.conf
+			cat /etc/php-fpm.d/www.conf.bak > /etc/php-fpm.d/www.conf
+			rm /etc/php-fpm.d/www.conf.bak
+			
+			conf_php
+			systemctl start php-fpm
+			systemctl enable php-fpm
+			systemctl restart nginx
+
+			printf "<?php echo "succes"; ?>" > /usr/share/nginx/html/info.php
+			echo -e "{${BLUE}Checking${NC}} Path: ${GREEN}/usr/share/nginx/html/info.php${NC}" >&2
+			cd /usr/share/nginx/html
+		;;
+	esac
+	site=$(curl -s $tmp_ip)
+
+	if [[ $site = "succes" ]] > /dev/null; 
+		then
+			echo -e "{${BLUE}Done${NC}} ${ORANGE}$package${NC} has been verified${GREEN}&${NC}instaled!" >&2
+		else 
+			echo -e "{${RED}Error${NC}} Verifying ${ORANGE}$package${NC} on (${GREEN}$tmp_ip${NC})" >&2
+	fi
+	rm -f info.php
+	popd > /dev/null
+}
+
+conf_php(){
+dr="$"
+
+echo "" > /etc/nginx/nginx.conf
+printf "# For more information on configuration, see:
+#   * Official English Documentation: http://nginx.org/en/docs/ 
+#   * Official Russian Documentation: http://nginx.org/ru/docs/ 
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    	worker_connections 1024;
+}
+
+http {
+	log_format  main \'${dr}remote_addr - ${dr}remote_user [${dr}time_local] \"${dr}request\" \'
+			\'${dr}status ${dr}body_bytes_sent \"${dr}http_referer\" \'
+			\'\"${dr}http_user_agent\" \"${dr}http_x_forwarded_for\"\';
+
+	access_log  /var/log/nginx/access.log  main;
+    	
+    	sendfile            on;
+    	tcp_nopush          on;
+    	tcp_nodelay         on;
+    	keepalive_timeout   65;
+    	types_hash_max_size 2048;
+    	
+    	include             /etc/nginx/mime.types;
+    	default_type        application/octet-stream;
+    	
+    	# Load modular configuration files from the /etc/nginx/conf.d directory.
+    	# See http://nginx.org/en/docs/ngx_core_module.html#include
+    	# for more information.
+    	include /etc/nginx/conf.d/*.conf;
+
+	server {
+    		listen       80;
+    		server_name  $private_ip;
+
+    		# note that these lines are originally from the \"location /\" block
+    		root   /usr/share/nginx/html;
+    		index index.php index.html index.htm;
+
+   	 	location / {
+        		try_files ${dr}uri ${dr}uri/ =404;
+    		}
+    		error_page 404 /404.html;
+    		error_page 500 502 503 504 /50x.html;
+    		location = /50x.html {
+       	 		root /usr/share/nginx/html;
+    		}
+
+    		location ~ \.php${dr} {
+        		try_files ${dr}uri =404;
+        		fastcgi_pass unix:/var/run/php-fpm/php-fpm.sock;
+        		fastcgi_index index.php;
+        		fastcgi_param SCRIPT_FILENAME ${dr}document_root${dr}fastcgi_script_name;
+        		include fastcgi_params;
+    		}
+	}
+	
+	# Settings for a TLS enabled server.
+	#
+	#    server {
+	#        listen       443 ssl http2 default_server;
+	#        listen       [::]:443 ssl http2 default_server;
+	#        server_name  _;
+	#        root         /usr/share/nginx/html;
+	#
+	#        ssl_certificate "/etc/pki/nginx/server.crt";
+	#        ssl_certificate_key "/etc/pki/nginx/private/server.key";
+	#        ssl_session_cache shared:SSL:1m;
+	#        ssl_session_timeout  10m;
+	#        ssl_ciphers HIGH:!aNULL:!MD5;
+	#        ssl_prefer_server_ciphers on;
+	#
+	#        # Load configuration files for the default server block.
+	#        include /etc/nginx/default.d/*.conf;
+	#
+	#        location / {
+	#        }
+	#        error_page 404 /404.html;
+	#            location = /40x.html {
+	#        }
+	#
+	#        error_page 500 502 503 504 /50x.html;
+	#            location = /50x.html {
+	#        }
+	#    }
+}
+" > /etc/nginx/nginx.conf
+
+}

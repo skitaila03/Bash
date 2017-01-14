@@ -1,0 +1,29 @@
+hosts(){
+	echo -e "Public ip: ${RED}$public_ip${NC} Private ip: ${RED}$private_ip${NC}" >&2
+	echo -e "${GREEN}*${NC} Enter IP: "
+	read ip
+	if [[ -z $ip ]]; 
+		then
+			echo -e "${GREEN}*${NC} If blank ${RED}$private_ip${NC} will be seted!"
+			ip=$private_ip
+	elif [[ ! "$ip" =~ ^([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})[.]([0-9]{1,3})$ ]];
+		then
+			echo -e "{${RED}Error${NC}} Invalid ${RED}$ip{NC}, setting ${GREEN}$private_ip${NC}!"
+			ip=$private_ip
+	fi
+	echo -e "${GREEN}*${NC} Enter HOST: "
+	read host
+	rand_host(){
+		host=$(openssl rand -base64 6)
+		host+="."
+		host+=$(openssl rand -hex 1)
+	}
+
+	if [[ -z $host ]];
+		then
+			echo -e "${GREEN}*${NC} If blank host is rand generated!"
+			rand_host
+	fi
+	echo "$ip $host" >> /etc/hosts
+	echo -e "{${BLUE}Done${NC}} ${ORANGE}$ip $host${NC} >> ${GREEN}/etc/hosts${NC}"
+}

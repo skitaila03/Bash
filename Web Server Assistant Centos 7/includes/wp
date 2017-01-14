@@ -1,0 +1,223 @@
+wp(){
+	if ! rpm -q nginx > /dev/null && ! rpm -q httpd > /dev/null;
+		then
+			echo -e "{${RED}Error${NC}} Webserver not installed!" >&2
+			exit
+	fi
+
+	echo -e "${PURPLE}=-=${NC} WordPress ${RED}Install${NC}|${RED}Configure${NC} Script ${PURPLE}=-=${NC}" >&2						
+	echo -e "${ORANGE}------------------------------------------${NC}" >&2
+	echo -e "${GREEN}*${NC} Install WordPress? (${RED}y${NC}/${RED}n${NC})" >&2
+	read -e wp_install
+	if [[ $wp_install = y ]] || [[ -z $wp_install ]];
+		then
+			echo -e "${GREEN}*${NC} Create database, user, password for wordpress? (${RED}y${NC}/${RED}n${NC})" >&2
+			read -e sql
+				
+			if [[ $sql = y ]] || [[ -z $sql ]];
+				then
+					echo -e "${PURPLE}=-=${NC} Database ${RED}Creator${NC} Script ${PURPLE}=-=${NC}" >&2
+					echo -e "${ORANGE}--------------------------------${NC}"
+
+					echo -e "{${RED}DataBase${NC}} ENTER ROOT PASSWORD: " >&2
+					read -s root_password	
+
+					echo -e "{${BLUE}DataBase${NC}} Name: " >&2
+					read -e db_name
+					while [[ -z $db_name ]]
+					do
+						echo -e "{${RED}Error${NC}} Cant leave empty!" >&2
+						echo -e "{${BLUE}DataBase${NC}} Name: " >&2
+						read -e db_name
+					done
+
+					echo -e "{${BLUE}DataBase${NC}} User: " >&2
+					read -e db_user
+					while [[ -z $db_user ]]
+					do
+						echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+						echo -e "{${BLUE}DataBase${NC}} User: " >&2
+						read -e db_user
+					done
+
+					echo -e "{${BLUE}DataBase${NC}} Passwd: " >&2
+					read -e db_passwd
+					while [[ -z $db_passwd ]]
+					do
+						echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+						echo -e "{${BLUE}DataBase${NC}} Passwd: " >&2
+						read -e db_passwd
+					done
+
+					mysql -u root -p$root_password -e "
+						CREATE DATABASE $db_name;
+						CREATE USER '$db_user'@'localhost' IDENTIFIED BY '$db_passwd';
+						GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user'@'localhost';
+						FLUSH PRIVILEGES; "
+
+					echo -e "${PURPLE}=-=${NC} Database ${RED}Info${NC} ${PURPLE}=-=${NC}" >&2
+					echo -e "${ORANGE}---------------------${NC}" >&2
+
+					echo -e "{${BLUE}DataBase${NC}} Name: ${GREEN}$db_name${NC}" >&2
+					echo -e "{${BLUE}DataBase${NC}} Username: ${GREEN}$db_user${NC}" >&2
+					echo -e "{${BLUE}DataBase${NC}} Password: ${GREEN}$db_passwd${NC}" >&2
+
+			fi
+
+			echo -e "${PURPLE}=-=${NC} Wordpress ${RED}Installer${NC} Script ${PURPLE}=-=${NC}" >&2
+			echo -e "${ORANGE}-----------------------------------${NC}" >&2
+
+			echo -e "{${BLUE}DataBase${NC}} Name: " >&2
+			read -e db_name
+			while [[ -z $db_name ]]
+			do
+				echo -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}DataBase${NC}} Name: " >&2
+				read -e db_name
+			done
+
+			echo -e "{${BLUE}DataBase${NC}} User: "
+			read -e db_user
+			while [[ -z $db_user ]]
+			do
+				echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}DataBase${NC}} User: " >&2
+				read -e db_user
+			done
+
+			echo -e "{${BLUE}DataBase${NC}} Passwd: "
+			read -e db_passwd
+			while [[ -z $db_passwd ]]
+			do
+				echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}DataBase${NC}} Passwd: " >&2
+				read -e db_passwd
+			done
+
+			echo -e "{${BLUE}Path${NC}} Wordpress Path(eq $public_ip/${RED}wp${NC}): "
+			read -e wp_path
+			while [[ -z $wp_path ]]
+			do
+				echo -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}Path${NC}} Wordpress Path(eq $public_ip/${RED}wp${NC}): " >&2
+				read -e wp_path
+			done
+
+			curl -Os https://wordpress.org/latest.tar.gz		
+			tar -zxvf latest.tar.gz
+			mv wordpress $wp_path
+
+			if rpm -q nginx > /dev/null;
+				then
+					cp -rf $wp_path /usr/share/nginx/html
+					cp /usr/share/nginx/html/$wp_path/wp-config-sample.php /usr/share/nginx/html/$wp_path/wp-config.php
+					perl -pi -e "s/database_name_here/$db_name/g" /usr/share/nginx/html/$wp_path/wp-config.php
+					perl -pi -e "s/username_here/$db_user/g" /usr/share/nginx/html/$wp_path/wp-config.php
+					perl -pi -e "s/password_here/$db_passwd/g" /usr/share/nginx/html/$wp_path/wp-config.php
+				
+					perl -i -pe'
+  					BEGIN 	{
+    							@chars = ("a" .. "z", "A" .. "Z", 0 .. 9);
+    							push @chars, split //, "!@#$%^&*()-_ []{}<>~\`+=,.;:/?|";
+    							sub salt { join "", map $chars[ rand @chars ], 1 .. 64 }
+  						}	
+  						s/put your unique phrase here/salt()/ge
+						' /usr/share/nginx/html/$wp_path/wp-config.php
+				
+					mkdir /usr/share/nginx/html/$wp_path/wp-content/uploads
+					chmod 775 /usr/share/nginx/html/$wp_path/wp-content/uploads
+			elif rpm -q httpd > /dev/null;
+				then
+					cp -rf $wp_path /var/www/html
+					cp /var/www/html/$wp_path/wp-config-sample.php /var/www/html/$wp_path/wp-config.php
+					perl -pi -e "s/database_name_here/$db_name/g" /var/www/html/$wp_path/wp-config.php
+					perl -pi -e "s/username_here/$db_user/g" /var/www/html/$wp_path/wp-config.php
+					perl -pi -e "s/password_here/$db_passwd/g" /var/www/html/$wp_path/wp-config.php
+				
+					perl -i -pe'
+  					BEGIN 	{
+    							@chars = ("a" .. "z", "A" .. "Z", 0 .. 9);
+    							push @chars, split //, "!@#$%^&*()-_ []{}<>~\`+=,.;:/?|";
+    							sub salt { join "", map $chars[ rand @chars ], 1 .. 64 }
+  						}	
+  						s/put your unique phrase here/salt()/ge
+						' /var/www/html/$wp_path/wp-config.php
+				
+					mkdir /var/www/html/$wp_path/wp-content/uploads
+					chmod 775 /var/www/html/$wp_path/wp-content/uploads
+			fi
+			rm latest.tar.gz
+			rm -Rf $wp_path
+			echo -e "{${BLUE}Done${NC}} Wordpress Installation Complete.\n"
+
+	fi
+
+	echo -e "${GREEN}*${NC} Configure WordPress? (${RED}y${NC}/${RED}n${NC})" >&2
+	read -e wp_config
+	if [[ $wp_config = y ]] || [[ -z $wp_config ]];
+		then
+			echo -e "${PURPLE}=-=${NC} Wordpress ${RED}WP-CLI${NC} Script ${PURPLE}=-=${NC}" >&2
+			echo -e "${ORANGE}-------------------------------${NC}" >&2
+			
+			if [ ! -f /usr/local/bin/wp ]; 
+				then
+					curl -Os https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+					chmod +x wp-cli.phar
+					sudo mv wp-cli.phar /usr/local/bin/wp
+					echo -e "{${BLUE}Done${NC}} WP-CLI Installation Complete.\n" >&2
+			fi
+
+			echo -e "{${BLUE}Config${NC}} Site Title: " >&2
+			read -e site_title
+			while [[ -z $site_title ]]
+			do
+				echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}Config${NC}} Site Title: " >&2
+				read -e site_title
+			done
+
+			echo -e "{${BLUE}Config${NC}} Site Username: " >&2
+			read -e site_username
+			while [[ -z $site_username ]] 
+			do
+				echo  -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}Config${NC}} Site Username: " >&2
+				read -e site_username
+			done
+
+			echo -e "{${BLUE}Config${NC}} Site Email: " >&2
+			read -e site_email
+			while [[ -z $site_email ]]
+			do
+				echo  -e "{${RED}Error${NC}} Cant leave empty" >&2
+				echo -e "{${BLUE}Config${NC}} Site Email: " >&2
+				read -e site_email
+			done
+
+			site_passwd=$(openssl rand -base64 12)
+			pushd $PWD > /dev/null
+			echo -e "{${BLUE}Path${NC}} Wordpress Path(eq $public_ip/${RED}wp${NC}): "
+			read -e wp_path
+			while [[ -z $wp_path ]]
+			do
+				echo -e "{${RED}Error${NC}} Cant leave empty!" >&2
+				echo -e "{${BLUE}Path${NC}} Wordpress Path(eq $public_ip/${RED}wp${NC}): " >&2
+				read -e wp_path
+			done
+			if rpm -q nginx > /dev/null;
+				then
+					cd /usr/share/nginx/html/$wp_path
+			elif rpm -q httpd > /dev/null;
+				then
+					cd /var/www/html/$wp_path
+			fi
+			/usr/local/bin/wp --allow-root core install --url=$public_ip/wps --title=$site_title --admin_user=$site_username --admin_email=$site_email  --admin_password=$site_passwd
+			echo -e "{${BLUE}Config${NC}} Site Title: ${GREEN}$site_title${NC}" >&2
+			echo -e "{${BLUE}Config${NC}} Username: ${GREEN}$site_username${NC}" >&2
+			echo -e "{${BLUE}Config${NC}} Email: ${GREEN}$site_email${NC}" >&2
+			echo -e "{${BLUE}Config${NC}} Password: ${GREEN}$site_passwd${NC}" >&2
+			rm -f /usr/local/bin/wp
+			echo -e "{${BLUE}Done${NC}} Wordpress Configuration Complete.\n" >&2
+			popd > /dev/null
+	fi
+}	

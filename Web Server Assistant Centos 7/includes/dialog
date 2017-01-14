@@ -1,0 +1,37 @@
+dialog_form(){
+	height=15
+	width=45
+	choice_height=7
+	backtitle="LAMP+WORDPRESS INSTALL"
+	title="Assistant"
+	menu="Choose one of the following options:"
+
+options=(1 "Install LAMP"
+	2 "Install LEMP"
+	3 "Open Ports"
+	4 "Set Hosts"
+	5 "Set VirtualHosts"
+	6 "Install Wordpress"
+	7 "Unistall")
+	
+
+choice=$(dialog --clear \
+                --backtitle "$backtitle" \
+                --title "$title" \
+                --menu "$menu" \
+                $height $width $choice_height \
+                "${options[@]}" \
+                2>&1 >/dev/tty)
+
+clear
+case $choice in
+        1) lamp ;;
+	2) lemp ;;
+	3) open_ports ;;
+	4) hosts ;;
+	5) vh ;;
+	6) wp ;;
+	7) unistall ;;
+esac
+
+}

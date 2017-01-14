@@ -1,0 +1,9 @@
+display_help() {
+    	echo -e "Usage: $0 [option...] {lamp|lemp|hosts|vh|ports|wp|unistall}" >&2
+    	echo 
+    	echo -e "	${ORANGE}-v${NC}, ${ORANGE}--version${NC}		print program version"
+    	echo -e "	${ORANGE}-d${NC}, ${ORANGE}--dialog${NC}		start the script with the dialog gui "
+	echo -e "	${ORANGE}-h${NC}, ${ORANGE}--help${NC}		give this help list"
+    	echo 
+    	exit 
+}

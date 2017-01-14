@@ -1,0 +1,80 @@
+vh(){
+	if ! rpm -q nginx > /dev/null && ! rpm -q httpd > /dev/null;
+		then
+			echo -e "{${RED}Error${NC}} Webserver not installed!" >&2
+			exit
+	fi
+	echo -e "{${BLUE}VH${NC}} Enter the name of virtual domain: "
+	read -e domain	
+
+	if rpm -q nginx > /dev/null
+		then
+			mkdir -p /var/www/$domain/html
+			chown -R $USER:$USER /var/www/$domain/html
+			chmod -R 755 /var/www
+			printf "<html>
+  				<head>
+    					<title>Welcome to $domain!</title>
+  				</head>
+  				<body>
+    					<h1>Success! The $domain virtual host is working!</h1>
+					<h1>Public ip: $public_ip</h1>
+					<h1>Private ip: $private_ip</h1>
+  				</body>
+			</html>" > /var/www/$domain/html/index.html
+			mkdir -p /etc/nginx/sites-available
+			mkdir -p /etc/nginx/sites-enabled
+			printf "server {
+    					listen  80;
+    					server_name $domain www.$domain;
+
+    					location / {
+        					root  /var/www/$domain/html;
+        					index  index.html index.htm;
+        					try_files ${dr}uri ${dr}uri/ =404;
+    					}
+
+    					error_page  500 502 503 504  /50x.html;
+    					location = /50x.html {
+        					root  /usr/share/nginx/html;
+    					}
+				}" > /etc/nginx/sites-available/$domain.conf
+		ln -s /etc/nginx/sites-available/$domain.conf /etc/nginx/sites-enabled/$domain.conf
+		systemctl restart nginx
+	elif rpm -q httpd > /dev/null
+		then
+			mkdir -p /var/www/$domain/public_html
+			chown -R $USER:$USER /var/www/$domain/public_html
+			chmod -R 755 /var/www
+			printf "<html>
+  				<head>
+    					<title>Welcome to $domain!</title>
+  				</head>
+  				<body>
+    					<h1>Success! The $domain virtual host is working!</h1>
+					<h1>Public ip: $public_ip</h1>
+					<h1>Private ip: $private_ip</h1>
+  				</body>
+			</html>" > /var/www/$domain/public_html/index.html
+
+			mkdir -p /etc/httpd/sites-available
+			mkdir -p /etc/httpd/sites-enabled
+	
+			if ! grep -q "IncludeOptional sites-enabled/*.conf" /etc/httpd/conf/httpd.conf;
+				then
+					printf "IncludeOptional sites-enabled/*.conf" >> /etc/httpd/conf/httpd.conf
+			fi
+	
+			printf "<VirtualHost *:80>
+    				ServerName www.$domain
+    				ServerAlias $domain
+    				DocumentRoot /var/www/$domain/public_html
+    				ErrorLog /var/www/$domain/error.log
+    				CustomLog /var/www/$domain/requests.log combined
+				</VirtualHost>" > /etc/httpd/sites-available/$domain.conf
+
+			sudo ln -s /etc/httpd/sites-available/$domain.conf /etc/httpd/sites-enabled/$domain.conf
+	fi
+	echo -e "${BLUE}Done${NC} ${ORANGE}$private_ip $domain${NC} >> ${GREEN}/etc/hosts${NC}" 
+	echo "$private_ip $domain" >> /etc/hosts
+}

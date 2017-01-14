@@ -1,0 +1,11 @@
+open_ports(){	
+	if rpm -q firewalld > /dev/null; 
+		then
+			echo -e "{${RED}Ports${NC}} Adding port 80:"
+			firewall-cmd --permanent --zone=public --add-service=http 
+			echo -e "{${RED}Ports${NC}} Adding port 443:"
+			firewall-cmd --permanent --zone=public --add-service=https
+			echo -e "{${RED}Ports${NC}} Reloading firewalld:"
+			firewall-cmd --reload
+	fi
+}	
