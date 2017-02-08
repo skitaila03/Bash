@@ -1,1 +1,1 @@
-chmod + ws & sudo ./ws -h 
+chmod + wsa & sudo ./wsa -h 
